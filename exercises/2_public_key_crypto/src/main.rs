@@ -345,10 +345,10 @@ fn print_keys(n: u32, d: u32, e: u32) {
 
 // Given a random number generator, produce two distinct pseudorandom primes.
 
-fn generate_two_primes(mut rng: &mut rand::prelude::ThreadRng) -> (u32, u32) {
+fn generate_two_primes(rng: &mut rand::prelude::ThreadRng) -> (u32, u32) {
 
-    let mut p = 0;
-    let mut q = 0;
+    let mut p: u32;
+    let mut q: u32;
 
     // Generally this loop should not execute more than once, but on the
     // off chance that we generate the same prime twice, we loop until
@@ -379,7 +379,7 @@ fn generate_two_primes(mut rng: &mut rand::prelude::ThreadRng) -> (u32, u32) {
 
 fn choose_private_exponent(c: u32, rng: &mut rand::prelude::ThreadRng) -> u32 {
 
-	let mut p = 0;
+	let mut p: u32;
 
     loop {
         // Step 1: Generate a random integer betwen 2 and c
@@ -413,7 +413,7 @@ fn compute_public_exponent(e: u32, n: u32) -> u32 {
 // Since the modulus is shared between public and private keys, there is no
 // no need to send it back twice.
 
-fn generate_key_pair(mut rng: &mut rand::prelude::ThreadRng) -> (u32, u32, u32) {
+fn generate_key_pair(rng: &mut rand::prelude::ThreadRng) -> (u32, u32, u32) {
 
     // Step 1: Choose two distinct prime numbers, p and q.
     //         I recommend you work on TODO 1 before this.
