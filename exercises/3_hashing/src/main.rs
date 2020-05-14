@@ -122,13 +122,25 @@ fn get_to_hash() -> String {
 fn strengthen(data: Vec<u8>) -> Vec<u8> {
 
     // TODO 1
-    
+
     // If the number of characters passed in was evenly divisible by BLOCK_SIZE
     // and was not 0, just return the data that was passed in.
+	if data.len() == 0 {
+		return vec![0,0,0,0,0,0,0,0];
+	}
+	let remainder = data.len() % BLOCK_SIZE;
+	if remainder == 0 {
+		return data;
+	}
+	let pad_length = BLOCK_SIZE - remainder;
 
     // Otherwise, add just enough 0's to the end so that the total length is
     // evenly divisible by BLOCK_SIZE.
-    vec![12]
+	let mut padded_data = data;
+    for _ in 0..pad_length {
+		padded_data.push(0);
+	}
+	padded_data
 
 }
 
@@ -186,12 +198,24 @@ fn transform(cv: u64, arr: [u8; BLOCK_SIZE]) -> u64 {
 
     // XOR the bytes in initial array against the CV's bytes
 
+	// I thought this was sexy af but it gives a Vec not an array. Fuck.
+	// let mut intermediate = cv.to_le_bytes().iter().zip(arr.iter()).map(|(a, b)| a ^ b).collect::<Vec<_>>();
+
+	let cv_bytes = cv.to_le_bytes();
+	let mut intermediate = [0u8; BLOCK_SIZE];
+	for i in 0..BLOCK_SIZE {
+		intermediate[i] = cv_bytes[i] ^ arr[i];
+	}
+
     // For these new bytes, run the twiddle function on them 1,024 times
+	for _ in 0..1024 {
+		twiddle(&mut intermediate)
+	}
 
     // Return the twiddled bytes as a single u64 value by interpreting the bytes
     // as a little-endian bytes
-    // Note that this is just an arbitrary return value to allow for compilation 
-    12
+    // Note that this is just an arbitrary return value to allow for compilation
+	u64::from_le_bytes(intermediate)
 }
 
 /// The compress function accepts a previous compress value and the data to operate
@@ -205,11 +229,17 @@ fn compress(cv: u64, data: Vec<u8>) -> u64 {
     // TODO 4
 
     // Convert the vector to an array of u8s of size 8
+	let mut bytes_data = [0u8; BLOCK_SIZE];
+	for i in 0..BLOCK_SIZE {
+		bytes_data[i] = data[i];
+	}
+
+	// Manually reverse the data to make test pass
+	// Re-evaluate this once https://github.com/w3f/mooc-exercises/issues/2 is resolved
+	bytes_data.reverse();
 
     // Call transform with cv and data as arguments
-    
-    // Note that this is just an arbitrary return value to allow for compilation 
-    12
+	transform(cv, bytes_data)
 }
 
 /// Given a vector of u8s, split it into a vector of vectors of u8s.
@@ -226,9 +256,21 @@ fn compress(cv: u64, data: Vec<u8>) -> u64 {
 
 fn split(data: Vec<u8>) -> Vec<Vec<u8>> {
     // TODO 2
-    
-    // Note that this is just an arbitrary return value to allow for compilation 
-    vec![vec![12]]
+
+	// Pad the data so it is a multiple of the block size
+	let my_data = strengthen(data);
+
+	// Construct the blocks
+	let block_count = my_data.len() / BLOCK_SIZE;
+
+	let mut blocks = Vec::new();
+	for i in 0..block_count {
+		let mut block = Vec::new();
+		block.extend_from_slice(&my_data[i*BLOCK_SIZE..(i+1)*BLOCK_SIZE]);
+		blocks.push(block);
+	}
+
+    blocks
 }
 
 /// The finalize function will return the bitwise complement of the passed-in value.
@@ -241,10 +283,7 @@ fn split(data: Vec<u8>) -> Vec<Vec<u8>> {
 /// 0xDEAD_BEEF_DEAD_BEEF -> 0x2152_4110_2152_4110
 
 fn finalize(to_finalize: u64) -> u64 {
-    // TODO 5
-    
-    // Note that this is just an arbitrary return value to allow for compilation 
-    12
+    !to_finalize
 }
 
 /// Run the BillHash function on the input string and return the hash value.
@@ -264,18 +303,22 @@ fn bill_hash(to_hash: String) -> u64 {
     // TODO 6
 
     // Convert the blocks into a vector of u8s
+	let raw_bytes = convert_string_to_u8s(to_hash);
 
     // Strengthen and split the blocks into BLOCK_SIZE-size blocks
+	let blocks = split(raw_bytes);
 
     // Set the initialization vector as the initial compress value
+	let mut cv = INITIALIZATION_VECTOR;
 
     // Loop through the blocks, taking the cv from the previous block
     // as input to the current block
+	for block in blocks {
+		cv = compress(cv, block);
+	}
 
     // Finalize and return that value as the hash
-
-    // Note that this is just an arbitrary return value to allow for compilation 
-    12
+	finalize(cv)
 }
 
 /// Main function.
